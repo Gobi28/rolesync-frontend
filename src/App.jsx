@@ -12,7 +12,7 @@ import AdminEmployeeList from './pages/AdminEmployeeList';
 import AdminEmployeeDetails from "./pages/AdminEmployeeDetails";
 import UpdateProfile from './pages/UpdateProfile';
 import EmployeeFeedback from './pages/EmployeeFeedback';
-
+import EmployeeRegister from './pages/EmployeeRegister';
 
 // import AdminLogin from './pages/AdminLogin'; // You'll create this later
 
@@ -33,6 +33,7 @@ function App() {
         <Route path="/employee/update-profile" element={<UpdateProfile />} />
 <Route path="/employee/feedback" element={<EmployeeFeedback />} />
         <Route path="/admin/employees/:id" element={<AdminEmployeeDetails />} />
+        <Route path="/employee/register" element={<EmployeeRegister />} />
 
         
   {/* Other routes */}

@@ -1,13 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 const EmployeeForm = () => {
   const navigate = useNavigate();
+  const [employeeId, setEmployeeId] = useState(null);
 
   const [formData, setFormData] = useState({
-    employeeId: "",
     name: "",
-    email: "",
     phone: "",
     technicalSkills: "",
     softSkills: "",
@@ -19,6 +18,30 @@ const EmployeeForm = () => {
     resume: null,
   });
 
+  const email = localStorage.getItem("employeeEmail");
+
+  useEffect(() => {
+    const fetchEmployeeId = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/employees/email/${email}`);
+        if (!response.ok) throw new Error("Failed to fetch employee ID");
+        const data = await response.json();
+        setEmployeeId(data.id);
+      } catch (error) {
+        console.error("Error fetching employee ID:", error);
+        alert("Session expired. Please log in again.");
+        navigate("/employee/login");
+      }
+    };
+
+    if (email) {
+      fetchEmployeeId();
+    } else {
+      alert("Email not found. Please login again.");
+      navigate("/employee/login");
+    }
+  }, [email, navigate]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -29,14 +52,11 @@ const EmployeeForm = () => {
     setFormData((prev) => ({ ...prev, [name]: files[0] }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Optional validation
     const requiredFields = [
-      "employeeId",
       "name",
-      "email",
       "phone",
       "technicalSkills",
       "softSkills",
@@ -48,15 +68,60 @@ const EmployeeForm = () => {
       "resume",
     ];
 
-    const allFilled = requiredFields.every((field) => formData[field]);
-    if (!allFilled) {
+    const allFilled = requiredFields.every((field) => {
+      const value = formData[field];
+      return value instanceof File ? value.size > 0 : value.trim() !== "";
+    });
+
+    if (!allFilled || !email) {
       alert("Please fill out all fields.");
       return;
     }
 
-    // Simulate successful submission
-    console.log("Form submitted:", formData);
-    navigate("/employee/profile");
+    const data = new FormData();
+    data.append("email", email);
+    data.append("employeeId", employeeId || ""); // fallback
+    data.append("name", formData.name);
+    data.append("phone", formData.phone);
+    data.append("technicalSkills", formData.technicalSkills);
+    data.append("softSkills", formData.softSkills);
+    data.append("education", formData.education);
+    data.append("experience", formData.experience);
+    data.append("currentRole", formData.currentRole);
+    data.append("certificationLink", formData.certificationLink);
+    data.append("certificationFile", formData.certificationFile);
+    data.append("resume", formData.resume);
+
+    try {
+      const response = await fetch("http://localhost:5000/api/employees/profile", {
+        method: "POST",
+        body: data,
+      });
+
+      const contentType = response.headers.get("content-type");
+
+      if (!response.ok) {
+        const errorData = contentType?.includes("application/json")
+          ? await response.json()
+          : await response.text();
+
+        console.error("Server Error:", errorData);
+        alert(
+          typeof errorData === "string"
+            ? "Server returned unexpected error."
+            : errorData.message || "Profile submission failed."
+        );
+        return;
+      }
+
+      const responseData = await response.json();
+      console.log("Success:", responseData);
+      alert("Profile submitted successfully!");
+      navigate("/employee/profile");
+    } catch (err) {
+      console.error("Network or unexpected error:", err);
+      alert("Submission failed. Check your backend server and network.");
+    }
   };
 
   return (
@@ -66,40 +131,26 @@ const EmployeeForm = () => {
           Employee Details Form
         </h2>
         <form onSubmit={handleSubmit} encType="multipart/form-data">
-          {/* Employee ID */}
-          <FormField label="Employee ID" name="employeeId" value={formData.employeeId} onChange={handleChange} placeholder="e.g., EMP123" />
+          {employeeId && (
+            <div className="mb-4">
+              <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">
+                Employee ID
+              </label>
+              <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded text-gray-900 dark:text-white">
+                {employeeId}
+              </div>
+            </div>
+          )}
 
-          {/* Name */}
           <FormField label="Name" name="name" value={formData.name} onChange={handleChange} />
-
-          {/* Email */}
-          <FormField label="Email" name="email" type="email" value={formData.email} onChange={handleChange} />
-
-          {/* Phone */}
           <FormField label="Phone" name="phone" type="tel" maxLength="10" value={formData.phone} onChange={handleChange} />
-
-          {/* Technical Skills */}
           <FormField label="Technical Skills" name="technicalSkills" value={formData.technicalSkills} onChange={handleChange} placeholder="e.g., Java, React" />
-
-          {/* Soft Skills */}
           <FormField label="Soft Skills" name="softSkills" value={formData.softSkills} onChange={handleChange} placeholder="e.g., Communication" />
-
-          {/* Education */}
           <FormField label="Education" name="education" value={formData.education} onChange={handleChange} placeholder="e.g., B.Tech IT" />
-
-          {/* Experience */}
           <FormField label="Experience" name="experience" value={formData.experience} onChange={handleChange} placeholder="e.g., 2 years" />
-
-          {/* Current Role */}
           <FormField label="Current Role" name="currentRole" value={formData.currentRole} onChange={handleChange} />
-
-          {/* Certification Link */}
           <FormField label="Certification Link" name="certificationLink" type="url" value={formData.certificationLink} onChange={handleChange} placeholder="https://..." />
-
-          {/* Certification File */}
           <FileField label="Certification File (PDF/Image)" name="certificationFile" onChange={handleFileUpload} accept="application/pdf,image/*" />
-
-          {/* Resume */}
           <FileField label="Upload Resume" name="resume" onChange={handleFileUpload} accept=".pdf" />
 
           <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md transition duration-200">
@@ -111,7 +162,6 @@ const EmployeeForm = () => {
   );
 };
 
-// Reusable input field component
 const FormField = ({ label, name, value, onChange, placeholder = "", type = "text", maxLength }) => (
   <div className="mb-4">
     <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">{label}</label>
@@ -128,7 +178,6 @@ const FormField = ({ label, name, value, onChange, placeholder = "", type = "tex
   </div>
 );
 
-// Reusable file input field
 const FileField = ({ label, name, onChange, accept }) => (
   <div className="mb-4">
     <label className="block mb-1 text-sm font-medium text-gray-700 dark:text-gray-200">{label}</label>
