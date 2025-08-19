@@ -93,7 +93,7 @@ const EmployeeForm = () => {
     data.append("resume", formData.resume);
 
     try {
-      const response = await fetch("http://localhost:5000/api/employees/profile", {
+      const response = await fetch("http://localhost:5000/api/employees/submit-profile", {
         method: "POST",
         body: data,
       });
